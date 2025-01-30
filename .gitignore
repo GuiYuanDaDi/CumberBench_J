@@ -1,0 +1,48 @@
+# Ignore compiled class files
+*.class
+*.ini
+
+# Ignore package files
+*.jar
+*.war
+*.ear
+
+# Ignore IDE and editor specific files
+# IntelliJ IDEA
+.idea/
+*.iml
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# NetBeans
+nbproject/
+
+# VSCode
+.vscode/
+
+# Ignore log files
+*.log
+
+# Ignore temporary files
+*~
+*.bak
+
+# Ignore generated files from build tools (Maven, Gradle)
+target/
+bin/
+out/
+
+# Ignore local configuration files
+*.ini
+*.properties
+
+# Ignore Java dependencies downloaded by build tools (Maven, Gradle)
+**/.mvn/
+**/node_modules/
+
+# Ignore database files
+*.sqlite
+*.db
