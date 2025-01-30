@@ -19,5 +19,16 @@ else
     exit 1
 fi
 
+# Check if the required files exist
+if [ ! -d "testsql" ]; then
+  mkdir testsql
+fi
+
+# Check if the configuration file exists
+if [ ! -f "config.ini" ]; then
+    echo "Error: Configuration file config.ini not found."
+    echo "Please create a config.ini file in the current directory."
+    exit 1
+fi
 
 java -cp target/CumberBench_J-1.0-SNAPSHOT.jar:lib/* App
