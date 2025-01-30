@@ -1,4 +1,4 @@
-![GitHub Logo](https://github.com/example.png)
+![logo](./images/eyu.jpg)
 # Database Consistency Test Tool
 
 This project is a tool for testing database consistency under different isolation levels. It defines multiple test cases through a configuration file, uses Java JDBC to connect to the database, randomly generates insert, delete, and update operations, and checks data consistency.
