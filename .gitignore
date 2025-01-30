@@ -1,6 +1,8 @@
 # Ignore compiled class files
 *.class
 *.ini
+*.log
+*.sql
 
 # Ignore package files
 *.war
