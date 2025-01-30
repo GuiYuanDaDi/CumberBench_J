@@ -29,19 +29,29 @@ db-consistency-test-tool
 - Parse configuration file to extract test case information.
 - Connect to the database via JDBC and execute SQL operations.
 - Randomly generate insert, delete, and update operations to simulate a concurrent environment.
-- Check data consistency to ensure correctness under different isolation levels.
+- Check data consistency to ensure correctness under different isolation levels (Read Committed, Repeatable Read).
 
-## Usage
+## Usage - Quick Start
 
-1. **Configuration File**: Define database connection information and test cases in `src/main/resources/config.ini`.
+1. **Configuration File**: Define database connection information and test cases in `./config.ini`.
+2. **Run the Program**: Run the generated JAR file.
+    ```sh
+    bash run.sh
+    ```
+3. **Testing Process**: Test statements are stored in the `testsql` folder according to the client, run logs are in `test.log`, and errors are in `err.log`.
+
+## Usage - Compile and Run
+
+1. **Configuration File**: Define database connection information and test cases in `./config.ini`.
 2. **Compile the Project**: Use Maven to compile the project.
     ```sh
     mvn clean install
     ```
 3. **Run the Program**: Run the generated JAR file.
     ```sh
-    java -jar target/db-consistency-test-tool-1.0-SNAPSHOT.jar
+    bash run.sh
     ```
+4. **Testing Process**: Test statements are stored in the `testsql` folder according to the client, run logs are in `test.log`, and errors are in `err.log`.
 
 ## Configuration File Example (`config.ini`)
 
@@ -50,19 +60,42 @@ db-consistency-test-tool
 jdbcurl=jdbc:postgresql://localhost:5432/testdb
 username=testuser
 password=testpass
+; Test duration
 test_duration=60
+; Maximum random range used in tests
+max_random=100
+
+; RC test: The first field must be id,
+; RR test: The first column is preferably not the primary key, as random values are likely to repeat
 
 [test1]
-create_sql=CREATE TABLE test1 (id INT PRIMARY KEY, value VARCHAR(100));
-select_sql=SELECT * FROM test1;
-index_col=id
+create_sql=CREATE TABLE test_table_1 (id INT, name VARCHAR(100) NOT NULL, page CHAR(50), core DECIMAL(10, 2));
+select_sql=SELECT * FROM test_table_1;
+index_col=id, name
 iso=READ_COMMITTED
 
 [test2]
-create_sql=CREATE TABLE test2 (id INT PRIMARY KEY, value VARCHAR(100));
-select_sql=SELECT * FROM test2;
-index_col=id
+create_sql=CREATE TABLE test_table_2 (id INT, name VARCHAR(100));
+select_sql=SELECT * FROM test_table_2;
+index_col=id, name
 iso=REPEATABLE_READ
+
+[test3]
+create_sql=CREATE TABLE test_table_3 (id INT, name VARCHAR(100));
+
+[test4]
+create_sql=CREATE TABLE users (user_id INT, username VARCHAR(100), email VARCHAR(100));
+select_sql=SELECT * FROM users;
+index_col=user_id, username, email
+iso=REPEATABLE_READ
+
+[test5]
+create_sql=CREATE TABLE products (id INT, name VARCHAR(100), price DECIMAL(10, 2), stock INT, category_id INT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
+select_sql=SELECT * FROM products;
+index_col=id, category_id
+iso=READ_COMMITTED
+
+[test...]
 ```
 
 ## Code Explanation
