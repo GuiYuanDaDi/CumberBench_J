@@ -139,5 +139,6 @@ iso=READ_COMMITTED
 
 ## 联系我
 
-![小红书](./images/xiaohongshu.png)
-![公众号](./images/公众号.jpg)
+![小红书](./images/xiaohongshu.jpg)
+![公众号](./images/gongzhonghao.jpg)
+![wechat](./images/xiaogou.png)
