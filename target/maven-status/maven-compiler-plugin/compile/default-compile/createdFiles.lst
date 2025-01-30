@@ -1,0 +1,8 @@
+test/Item.class
+util/Logger.class
+test/TestWorker.class
+App.class
+test/TestCase.class
+config/ConfigParser.class
+test/SQLGenerator.class
+db/DatabaseConnection.class

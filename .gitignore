@@ -32,7 +32,6 @@ nbproject/
 *.bak
 
 # Ignore generated files from build tools (Maven, Gradle)
-target/
 bin/
 out/
 
