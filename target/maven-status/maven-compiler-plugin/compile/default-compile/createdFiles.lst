@@ -1,6 +1,8 @@
+db/ConnectionPool.class
 test/Item.class
 util/Logger.class
 test/TestWorker.class
+util/ControlledFileWriter.class
 App.class
 test/TestCase.class
 config/ConfigParser.class

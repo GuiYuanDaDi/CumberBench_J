@@ -28,7 +28,7 @@ public class ConfigParser {
         // Get the current working directory
         String path = System.getProperty("user.dir");
         File file = new File(path + "/" + filePath);
-        //System.out.println("Configuration file loading: " + path + "/" + filePath);
+        System.out.println("Configuration file loading: " + path + "/" + filePath);
 
         // Load the INI file
         Ini ini = new Ini(file);

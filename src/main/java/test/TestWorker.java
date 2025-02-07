@@ -57,7 +57,7 @@ public class TestWorker implements Runnable {
                     statement.execute(createIndexStatement);
                     Logger.log(String.format("Test case: %s, Index %s created successfully", testCase.getTestCaseName(), indexColumn.trim()));
                 }
-                connection.close();
+                dbConnection.close();
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -426,9 +426,10 @@ public class TestWorker implements Runnable {
     private void checkDataConsistency(Connection connection, int BaseId, List<Integer> visibleIds,
             List<Integer> invisibleIds, Queue<Item> in_data, boolean aftercommit) {
         boolean myself = true;
+        DatabaseConnection dbConnection = null;
         if (connection == null) {
             try {
-                DatabaseConnection dbConnection = new DatabaseConnection(configParser);
+                dbConnection = new DatabaseConnection(configParser);
                 connection = dbConnection.getConnection();
                 connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
                 connection.setAutoCommit(false);
@@ -499,12 +500,8 @@ public class TestWorker implements Runnable {
             e.printStackTrace();
         }
 
-        if (!myself) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+        if (!myself) { 
+            dbConnection.close();
         }
     }
 

@@ -1,26 +1,29 @@
 package db;
 
 import config.ConfigParser;
-
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
-import java.util.Properties;
 import java.sql.Statement;
 
 public class DatabaseConnection implements AutoCloseable {
+    private static ConnectionPool connectionPool;
     private Connection connection;
 
     public DatabaseConnection(ConfigParser configParser) throws SQLException {
-        
-        connect(configParser.getJdbcUrl(), configParser.getUsername(), configParser.getPassword());
-    }
-
-    private void connect(String url, String user, String password) throws SQLException {
-        Properties properties = new Properties();
-        properties.setProperty("user", user);
-        properties.setProperty("password", password);
-        connection = DriverManager.getConnection(url, properties);
+        if (connectionPool == null) {
+            synchronized (DatabaseConnection.class) {
+                if (connectionPool == null) {
+                    connectionPool = new ConnectionPool(
+                        configParser.getJdbcUrl(),
+                        configParser.getUsername(),
+                        configParser.getPassword(),
+                        20, // initial pool size
+                        30 // max pool size
+                    );
+                }
+            }
+        }
+        this.connection = connectionPool.getConnection();
     }
 
     public Connection getConnection() {
@@ -30,11 +33,7 @@ public class DatabaseConnection implements AutoCloseable {
     @Override
     public void close() {
         if (connection != null) {
-            try {
-                connection.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            connectionPool.releaseConnection(connection);
         }
     }
 

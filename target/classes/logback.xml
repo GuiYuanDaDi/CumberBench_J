@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- 定义控制台输出的 Appender -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 根日志级别设置为 INFO，并使用控制台 Appender -->
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+    <!-- 关闭 HikariCP 的日志 -->
+    <logger name="com.zaxxer.hikari" level="OFF" />
+
+    <!-- 如果使用其他包也需要关闭日志，可以在这里添加 -->
+    <!--
+    <logger name="org.springframework" level="WARN" />
+    <logger name="com.yourcompany" level="DEBUG" />
+    -->
+</configuration>
