@@ -15,6 +15,7 @@ public class ConfigParser {
     private String password; // Database password
     private int testDuration; // Test duration in seconds
     private int max_random; // Maximum random number for test cases
+    private boolean enableLogging;
     private Map<String, TestCase> testCases; // Map of test cases
 
     /**
@@ -49,7 +50,7 @@ public class ConfigParser {
         jdbcUrl = ini.get("main", "jdbcurl"); // Read the JDBC URL
         username = ini.get("main", "username"); // Read the database username
         password = ini.get("main", "password"); // Read the database password
-
+        enableLogging = Boolean.parseBoolean(ini.get("main", "logging_sql"));
         // Read test duration, with a default value of 60 seconds
         String testDurationStr = ini.get("main", "test_duration");
         testDuration = (testDurationStr != null) ? Integer.parseInt(testDurationStr) : 60;
@@ -92,6 +93,9 @@ public class ConfigParser {
 
     public int getTestDuration() {
         return testDuration;
+    }
+    public boolean getEnableLogging() {
+        return enableLogging;
     }
 
     public Map<String, TestCase> getTestCases() {

@@ -2,17 +2,16 @@ package test;
 
 import db.DatabaseConnection;
 import util.Logger;
-
+import util.ControlledFileWriter;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import java.io.FileWriter;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.ResultSet;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import java.io.IOException;
 
 import java.util.*;
@@ -74,9 +73,9 @@ public class TestWorker implements Runnable {
 
     private void performDatabaseOperations(int id) {
         String fileName = "testsql/" + testCase.getTestCaseName() + "_thread_" + id + ".sql";
-        FileWriter fileWriter;
+        ControlledFileWriter fileWriter;
         try {
-            fileWriter = new FileWriter(fileName, false);
+            fileWriter = new ControlledFileWriter(fileName, configParser.getEnableLogging());
         } catch (IOException e) {
             e.printStackTrace();
             return;
@@ -95,7 +94,7 @@ public class TestWorker implements Runnable {
         }
     }
 
-    private void performRepeatbleOperations(int id, FileWriter fileWriter) {
+    private void performRepeatbleOperations(int id, ControlledFileWriter fileWriter) {
         try (DatabaseConnection dbConnection = new DatabaseConnection(configParser)) {
             Connection connection = dbConnection.getConnection();
             connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
@@ -168,7 +167,7 @@ public class TestWorker implements Runnable {
         }
     }
 
-    private void performRandomOperations(Statement statement, FileWriter fileWriter, int id) throws SQLException {
+    private void performRandomOperations(Statement statement, ControlledFileWriter fileWriter, int id) throws SQLException {
         // Generates a random number of random CRUD operations
         for (int i = 0; i < 10; i++) {
             int operation = (int) (Math.random() * 3);
@@ -269,7 +268,7 @@ public class TestWorker implements Runnable {
         }
     }
 
-    private void performReadCommittedOperations(int thid, FileWriter fileWriter) {
+    private void performReadCommittedOperations(int thid, ControlledFileWriter fileWriter) {
         try (DatabaseConnection dbConnection = new DatabaseConnection(configParser)) {
             Connection connection = dbConnection.getConnection();
             connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
