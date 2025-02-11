@@ -94,6 +94,9 @@ public class ConfigParser {
     public int getTestDuration() {
         return testDuration;
     }
+    public int getMaxrandom() {
+        return max_random;
+    }
     public boolean getEnableLogging() {
         return enableLogging;
     }

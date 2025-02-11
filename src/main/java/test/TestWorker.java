@@ -98,35 +98,52 @@ public class TestWorker implements Runnable {
         try (DatabaseConnection dbConnection = new DatabaseConnection(configParser)) {
             Connection connection = dbConnection.getConnection();
             connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
-            connection.setAutoCommit(false);
+            connection.setAutoCommit(true);
             int threadId = id;
+            SQLGenerator sql_g = new SQLGenerator(testCase);
 
             // Prepopulate the table with 500 random insert statements
             try (Statement statement = connection.createStatement()) {
-                for (int i = 0; i < 500; i++) {
-                    String sql = new SQLGenerator(testCase).generateInsertStatement();
+                for (int i = 0; i < (configParser.getMaxrandom() * 5); i++) {
+                    String sql = sql_g.generateInsertStatement();
                     fileWriter.write(sql + "--" + this.getCurrentTimeString() + "\n");
+                    queryCount.incrementAndGet();
                     statement.executeUpdate(sql);
                 }
-                connection.commit();
+                //connection.commit();
             } catch (SQLException e) {
-                connection.rollback();
+                //connection.rollback();
                 e.printStackTrace();
             }
-
+            connection.setAutoCommit(false);
             while (true) {
                 // Infinite loop to perform random CRUD operations within a transaction
                 try (Statement statement = connection.createStatement()) {
-                    if (id % 2 == 0) {
+                    if (id == 0) {
                         // Read-only thread, only performs read transactions
                         validateDataConsistency(statement);
                         connection.commit();
                         transactionCount.incrementAndGet(); // Increment transaction count
-                    } else {
+                    }
+                    if (id == 1) {
                         // Mixed read-write thread
                         fileWriter.write("begin;" + "\n");
                         performRandomOperations(statement, fileWriter, threadId);
                         validateDataConsistency(statement);
+                        if (Math.random() < 0.7) {
+                            connection.commit();
+                            fileWriter.write("commit;" + "\n");
+                            transactionCount.incrementAndGet(); // Increment transaction count
+                        } else {
+                            connection.rollback();
+                            transactionCount.incrementAndGet(); // Increment transaction count
+                            fileWriter.write("rollback;" + "\n");
+                        }
+                    }
+                    if (id > 1) {
+                        // write thread
+                        fileWriter.write("begin;" + "\n");
+                        performRandomOperations(statement, fileWriter, threadId);
                         if (Math.random() < 0.7) {
                             connection.commit();
                             fileWriter.write("commit;" + "\n");
@@ -169,18 +186,19 @@ public class TestWorker implements Runnable {
 
     private void performRandomOperations(Statement statement, ControlledFileWriter fileWriter, int id) throws SQLException {
         // Generates a random number of random CRUD operations
+        SQLGenerator sql_g = new SQLGenerator(testCase);
         for (int i = 0; i < 10; i++) {
             int operation = (int) (Math.random() * 3);
             String sql;
             switch (operation) {
                 case 0:
-                    sql = new SQLGenerator(testCase).generateInsertStatement();
+                    sql = sql_g.generateInsertStatement();
                     break;
                 case 1:
-                    sql = new SQLGenerator(testCase).generateDeleteStatement();
+                    sql = sql_g.generateDeleteStatement();
                     break;
                 default:
-                    sql = new SQLGenerator(testCase).generateUpdateStatement();
+                    sql = sql_g.generateUpdateStatement();
                     break;
             }
 
