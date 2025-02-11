@@ -65,6 +65,7 @@ password=testpass
 test_duration=60
 ; Maximum random range used in tests
 max_random=100
+logging_sql = true
 
 ; RC test: The first field must be id,
 ; RR test: The first column is preferably not the primary key, as random values are likely to repeat

@@ -64,6 +64,7 @@ password=testpass
 test_duration=60
 ;测试使用的最大随机范围
 max_random = 100
+logging_sql = true
 
 ;RC 测试 第一个字段必须为id,
 ;RR 测试第一列最好不是主健，因为随机值容易重复
