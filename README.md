@@ -13,9 +13,9 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             width: fit-content;">
   <strong>
-    <a href="./README.md" style="margin: 0 10px; color: #2c3e50; text-decoration: none;">🇺🇸 English</a>
+    <a href="./README.md" style="margin: 0 10px; color: #2c3e50; text-decoration: none;font-size: 18px;">🇺🇸 English</a>
     <span style="color: #ddd;">|</span>
-    <a href="./README.zh-CN.md" style="margin: 0 10px; color: #2c3e50; text-decoration: none;">🇨🇳 中文</a>
+    <a href="./README.zh-CN.md" style="margin: 0 10px; color: #2c3e50; text-decoration: none;font-size: 18px;">🇨🇳 中文</a>
   </strong>
 </div>
 
