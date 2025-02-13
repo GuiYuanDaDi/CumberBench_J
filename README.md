@@ -1,5 +1,25 @@
-[English](./README.md) | [中文](./README.zh-CN.md)
-![logo](./images/eyu1.png)
+<div align="center">
+
+<!-- Logo（居中显示，带阴影） -->
+<a href="#">
+  <img src="./images/eyu1.png" 
+       alt="Logo" 
+       style="width: 200px; margin: 20px 0; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+</a>
+
+<!-- 语言切换栏（带背景和圆角） -->
+<div style="margin: 20px auto; padding: 12px; 
+            background: #f8f9fa; border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            width: fit-content;">
+  <strong>
+    <a href="./README.md" style="margin: 0 10px; color: #2c3e50; text-decoration: none;">🇺🇸 English</a>
+    <span style="color: #ddd;">|</span>
+    <a href="./README.zh-CN.md" style="margin: 0 10px; color: #2c3e50; text-decoration: none;">🇨🇳 中文</a>
+  </strong>
+</div>
+
+</div>
 # Database Consistency Test Tool - CumberBench
 
 This project is a tool for testing database consistency under different isolation levels. It defines multiple test cases through a configuration file, uses Java JDBC to connect to the database, randomly generates insert, delete, and update operations, and checks data consistency.
