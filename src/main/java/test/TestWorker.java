@@ -108,6 +108,7 @@ public class TestWorker implements Runnable {
                     String sql = sql_g.generateInsertStatement();
                     fileWriter.write(sql + "--" + this.getCurrentTimeString() + "\n");
                     queryCount.incrementAndGet();
+                    transactionCount.incrementAndGet();
                     statement.executeUpdate(sql);
                 }
                 //connection.commit();
@@ -156,7 +157,7 @@ public class TestWorker implements Runnable {
                     }
                 } catch (SQLException e) {
                     if (e.getSQLState().equals("25P02") || e.getSQLState().equals("40P01")) {
-                        connection.rollback();
+                        //connection.rollback();
                         transactionCount.incrementAndGet();
                         fileWriter.write("rollback;" + "\n");
                     } else {
