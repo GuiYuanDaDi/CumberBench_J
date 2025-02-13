@@ -1,3 +1,4 @@
+[English](./README.md) | [中文](./README.zh-CN.md)
 ![logo](./images/eyu1.png)
 # Database Consistency Test Tool - CumberBench
 
