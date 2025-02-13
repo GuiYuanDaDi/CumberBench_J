@@ -4,7 +4,7 @@
 <a href="#">
   <img src="./images/eyu1.png" 
        alt="Logo" 
-       style="width: 200px; margin: 20px 0; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+       style="width: 400px; margin: 40px 0; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
 </a>
 
 <!-- 语言切换栏（带背景和圆角） -->
