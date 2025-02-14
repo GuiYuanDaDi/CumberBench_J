@@ -118,19 +118,18 @@ public class TestWorker implements Runnable {
             }
             connection.setAutoCommit(false);
             while (true) {
-                // Infinite loop to perform random CRUD operations within a transaction
-                try (Statement statement = connection.createStatement()) {
+                // Infinite loop to perform random CRUD operations within a transaction              
                     if (id == 0) {
                         // Read-only thread, only performs read transactions
-                        validateDataConsistency(statement);
+                        validateDataConsistency(connection);
                         connection.commit();
                         transactionCount.incrementAndGet(); // Increment transaction count
                     }
                     if (id == 1) {
                         // Mixed read-write thread
                         fileWriter.write("begin;" + "\n");
-                        performRandomOperations(statement, fileWriter, threadId);
-                        validateDataConsistency(statement);
+                        performRandomOperations(connection, fileWriter, threadId);
+                        validateDataConsistency(connection);
                         if (Math.random() < 0.7) {
                             connection.commit();
                             fileWriter.write("commit;" + "\n");
@@ -144,7 +143,7 @@ public class TestWorker implements Runnable {
                     if (id > 1) {
                         // write thread
                         fileWriter.write("begin;" + "\n");
-                        performRandomOperations(statement, fileWriter, threadId);
+                        performRandomOperations(connection, fileWriter, threadId);
                         if (Math.random() < 0.7) {
                             connection.commit();
                             fileWriter.write("commit;" + "\n");
@@ -155,15 +154,7 @@ public class TestWorker implements Runnable {
                             fileWriter.write("rollback;" + "\n");
                         }
                     }
-                } catch (SQLException e) {
-                    if (e.getSQLState().equals("25P02") || e.getSQLState().equals("40P01")) {
-                        //connection.rollback();
-                        transactionCount.incrementAndGet();
-                        fileWriter.write("rollback;" + "\n");
-                    } else {
-                        throw e;
-                    }
-                }
+        
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -185,7 +176,7 @@ public class TestWorker implements Runnable {
         }
     }
 
-    private void performRandomOperations(Statement statement, ControlledFileWriter fileWriter, int id) throws SQLException {
+    private void performRandomOperations(Connection connection, ControlledFileWriter fileWriter, int id) throws SQLException {
         // Generates a random number of random CRUD operations
         SQLGenerator sql_g = new SQLGenerator(testCase);
         for (int i = 0; i < 10; i++) {
@@ -203,7 +194,7 @@ public class TestWorker implements Runnable {
                     break;
             }
 
-            try {
+            try (Statement statement = connection.createStatement()) {
                 fileWriter.write(sql + "--" + this.getCurrentTimeString() + "\n");
                 statement.executeUpdate(sql);
                 queryCount.incrementAndGet();
@@ -220,70 +211,93 @@ public class TestWorker implements Runnable {
         }
     }
 
-    private void validateDataConsistency(Statement statement) throws SQLException {
+    private void validateDataConsistency(Connection connection) throws SQLException {
         // Executes the SELECT statement from the test case and limits the result set to 1000 rows
         int ccount = 0;
         int ccount1 = 0;
-        statement.setMaxRows(10000);
-        statement.execute(testCase.getSelectStatement());
-        String c_sql = "select count(*) from " + testCase.getTableName() + ";";
-        ResultSet resultSet1 = statement.getResultSet();
-        queryCount.incrementAndGet();
-        List<String> resInt1 = new ArrayList<>();
-        List<String> resStr1 = new ArrayList<>();
-        int count1 = 0;
-        int count2 = 0;
-
-        while (resultSet1.next()) {
-            resInt1.add(resultSet1.getString(1));
-            resStr1.add(resultSet1.getString(2));
-            count1++;
-        }
-        statement.execute(c_sql);
-        ResultSet resultSet = statement.getResultSet();
-        while (resultSet.next()) {
-            ccount = resultSet.getInt(1);
-        }
-
-        for (int i = 0; i < 3; i++) {
-            statement.setMaxRows(10000);
+        try (Statement statement = connection.createStatement()) {
+            statement.setMaxRows(configParser.getMaxrandom());
             statement.execute(testCase.getSelectStatement());
+            String c_sql = "select count(*) from " + testCase.getTableName() + ";";
+            ResultSet resultSet1 = statement.getResultSet();
             queryCount.incrementAndGet();
-            ResultSet resultSet2 = statement.getResultSet();
-            List<String> resInt2 = new ArrayList<>();
-            List<String> resStr2 = new ArrayList<>();
-            count2 = 0;
-            while (resultSet2.next()) {
-                resInt2.add(resultSet2.getString(1));
-                resStr2.add(resultSet2.getString(2));
-                count2++;
-            }
-            for (int j = 0; j < resStr1.size(); j++) {
-                if (!resStr1.get(j).equals(resStr2.get(j))) {
-                    System.out.println("Test discovered: " + testCase.getTestCaseName() + " data comparison mismatch");
-                    Logger.logError(String.format(
-                            "Test case: %s, Data inconsistency found. first_select: %s, next_select: %s, next_select: %d, Count2: %d",
-                            testCase.getTestCaseName(), resStr1.get(j), resStr2.get(j), count1, count2),
-                            new Throwable("Data inconsistency error"));
-                    System.exit(0);
-                }
+            List<String> resInt1 = new ArrayList<>();
+            List<String> resStr1 = new ArrayList<>();
+            int count1 = 0;
+            int count2 = 0;
+
+            while (resultSet1.next()) {
+                resInt1.add(resultSet1.getString(1));
+                resStr1.add(resultSet1.getString(2));
+                count1++;
             }
             statement.execute(c_sql);
-            ResultSet resultSet3 = statement.getResultSet();
-            while (resultSet3.next()) {
-                ccount1 = resultSet3.getInt(1);
+            ResultSet resultSet = statement.getResultSet();
+            while (resultSet.next()) {
+                ccount = resultSet.getInt(1);
             }
-            if (ccount != ccount1) {
-                System.out.println("Test discovered: " + testCase.getTestCaseName() + " count (*) comparison mismatch");
-                Logger.logError(String.format(
-                        "Test case: %s, conut (*). first_count: %d, next_count: %d", testCase.getTestCaseName(),
-                        ccount, ccount1), new Throwable("Data inconsistency error"));
-                System.exit(0);
-            }
-            if (Math.random() < 0.01) {
-                Logger.log(String.format("Test case: %s, RR passed in one check", testCase.getTestCaseName()));
+            resultSet.close();
+            for (int i = 0; i < 3; i++) {
+                statement.setMaxRows(configParser.getMaxrandom());
+                statement.execute(testCase.getSelectStatement());
+                queryCount.incrementAndGet();
+                ResultSet resultSet2 = statement.getResultSet();
+                List<String> resInt2 = new ArrayList<>();
+                List<String> resStr2 = new ArrayList<>();
+                count2 = 0;
+                int j = 0;
+                boolean exit_flag = false;
+                while (resultSet2.next()) {
+                    resInt2.add(resultSet2.getString(1));
+                    resStr2.add(resultSet2.getString(2));
+                    count2++;
+                    if ((!resStr1.get(j).equals(resStr2.get(j))) && !exit_flag) {
+                        System.out.println(
+                                "Test discovered: " + testCase.getTestCaseName() + " data comparison mismatch");
+                        Logger.logError(String.format(
+                                "Test case: %s, Data inconsistency found. first_select: %s, next_select: %s, next_select: %d, Count2: %d",
+                                testCase.getTestCaseName(), resStr1.get(j), resStr2.get(j), count1, count2),
+                                new Throwable("Data inconsistency error"));
+                        exit_flag = true;
 
+                    }
+                    j++;
+                }
+                resultSet2.close();
+                if (exit_flag) {
+                    Logger.logError(String.format("Test case: %s, Data inconsistency found. Exiting loop. First select: %s, Next select: %s", testCase.getTestCaseName(), resStr1, resStr2), new Throwable("Data inconsistency error"));
+                    System.exit(0);
+                }
+                
+
+                
+                statement.execute(c_sql);
+                ResultSet resultSet3 = statement.getResultSet();
+                while (resultSet3.next()) {
+                    ccount1 = resultSet3.getInt(1);
+                }
+                resultSet3.close();
+                if (ccount != ccount1) {
+                    System.out.println(
+                            "Test discovered: " + testCase.getTestCaseName() + " count (*) comparison mismatch");
+                    Logger.logError(String.format(
+                            "Test case: %s, conut (*). first_count: %d, next_count: %d", testCase.getTestCaseName(),
+                            ccount, ccount1), new Throwable("Data inconsistency error"));
+                    System.exit(0);
+                }
+                if (Math.random() < 0.01) {
+                    Logger.log(String.format("Test case: %s, RR passed in one check", testCase.getTestCaseName()));
+
+                }
             }
+        }catch(SQLException e){
+            if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
+                Logger.log(String.format("Test case: %s, %s lock conflict, continuing execution", testCase.getTestCaseName(), e));
+
+            } else {
+                throw e;
+            }
+            
         }
     }
 
@@ -298,7 +312,7 @@ public class TestWorker implements Runnable {
             Queue<Item> un_commit = new LinkedList<>();
             boolean rollback = false;
 
-            for (int i = (100 * (threadId - 1)); i <= (100 * threadId - 1); i++) {
+            for (int i = (configParser.getMaxrandom() * (threadId - 1)); i <= (configParser.getMaxrandom() * threadId - 1); i++) {
                 Item item = new Item(i, 4);
                 out_data.add(item);
             }
@@ -472,8 +486,8 @@ public class TestWorker implements Runnable {
 
         Collections.sort(tmpVisibleIds);
         Collections.sort(tmpInvisibleIds);
-        int min = 100 * (BaseId - 1);
-        int max = 100 * BaseId - 1;
+        int min = configParser.getMaxrandom() * (BaseId - 1);
+        int max = configParser.getMaxrandom() * BaseId - 1;
 
         String sql = "select * from " + testCase.getTableName() + " where id >= " + min + " and id <= " + max
                 + " order by id asc";

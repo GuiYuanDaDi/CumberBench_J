@@ -108,7 +108,7 @@ public class App {
     private static void CrocodileArt() {
         System.out.println("************************************");
         System.out.println("*                                  *");
-        System.out.println("*      Welcome to CuberBench!      *");
+        System.out.println("*      Welcome to CumberBench!     *");
         System.out.println("*                                  *");
         System.out.println("************************************");
         System.out.println("               .-._   _ _ _ _ _ _ _ _");
