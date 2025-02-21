@@ -1,11 +1,26 @@
 package test;
 
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.Random;
 import java.util.AbstractMap;
 
 public class SQLGenerator {
     private final TestCase testCase; // The test case containing table and column information
     private final Random random; // Random number generator for generating random values
+
+    // Data type constants
+    public static final int TYPE_INT = 1;
+    public static final int TYPE_BIGINT = 2;
+    public static final int TYPE_FLOAT = 3;
+    public static final int TYPE_DOUBLE = 4;
+    public static final int TYPE_BOOLEAN = 5;
+    public static final int TYPE_VARCHAR = 6;
+    public static final int TYPE_CHAR = 7;
+    public static final int TYPE_DECIMAL = 8;
+    public static final int TYPE_TIMESTAMP = 9;
+    public static final int TYPE_TEXT = 10;
+    public static final int TYPE_DATE = 11;
 
     public SQLGenerator(TestCase testCase) {
         this.testCase = testCase;
@@ -94,6 +109,156 @@ public class SQLGenerator {
         setClause.setLength(setClause.length() - 2);
 
         return String.format("UPDATE %s SET %s WHERE id = %d;", testCase.getTableName(), setClause.toString(), oldId);
+    }
+
+    // Generates an SQL INSERT statement with placeholders for PreparedStatement
+    public String generatePreparedInsertStatement() {
+        StringBuilder columns = new StringBuilder();
+        StringBuilder placeholders = new StringBuilder();
+
+        for (AbstractMap.SimpleEntry<String, String> entry : testCase.getColumns()) {
+            columns.append(entry.getKey()).append(", ");
+            placeholders.append("?, ");
+        }
+
+        // Remove the trailing comma and space
+        columns.setLength(columns.length() - 2);
+        placeholders.setLength(placeholders.length() - 2);
+
+        return String.format("INSERT INTO %s (%s) VALUES (%s);", testCase.getTableName(), columns.toString(), placeholders.toString());
+    }
+
+    // Generates an SQL DELETE statement with a placeholder for PreparedStatement
+    public String generatePreparedDeleteStatement() {
+        String primaryKey = testCase.getColumns().get(0).getKey(); // Assuming the first column is the primary key
+        return String.format("DELETE FROM %s WHERE %s = ?;", testCase.getTableName(), primaryKey);
+    }
+
+    // Generates an SQL UPDATE statement with placeholders for PreparedStatement
+    public String generatePreparedUpdateStatement() {
+        StringBuilder setClause = new StringBuilder();
+        String primaryKey = testCase.getColumns().get(0).getKey();  // Assuming the first column is the primary key
+
+        for (AbstractMap.SimpleEntry<String, String> entry : testCase.getColumns()) {
+            if (!entry.getKey().equals(primaryKey)) {
+                setClause.append(entry.getKey()).append(" = ?, ");
+            }
+        }
+
+        // Remove the trailing comma and space
+        setClause.setLength(setClause.length() - 2);
+
+        return String.format("UPDATE %s SET %s WHERE %s = ?;", testCase.getTableName(), setClause.toString(), primaryKey);
+    }
+
+    // Generates an SQL INSERT statement with a specific ID and placeholders for PreparedStatement
+    public String generatePreparedInsertStatementWithId() {
+        StringBuilder columns = new StringBuilder();
+        StringBuilder placeholders = new StringBuilder();
+
+        for (AbstractMap.SimpleEntry<String, String> entry : testCase.getColumns()) {
+            columns.append(entry.getKey()).append(", ");
+            placeholders.append("?, ");
+        }
+
+        // Remove the trailing comma and space
+        columns.setLength(columns.length() - 2);
+        placeholders.setLength(placeholders.length() - 2);
+
+        return String.format("INSERT INTO %s (%s) VALUES (%s);", testCase.getTableName(), columns.toString(), placeholders.toString());
+    }
+
+    // Generates an SQL DELETE statement with a specific ID and placeholder for PreparedStatement
+    public String generatePreparedDeleteStatementWithId() {
+        return String.format("DELETE FROM %s WHERE id = ?;", testCase.getTableName());
+    }
+
+    // Generates an SQL UPDATE statement with a specific old ID, new ID, and placeholders for PreparedStatement
+    public String generatePreparedUpdateStatementWithId() {
+        StringBuilder setClause = new StringBuilder();
+
+        for (AbstractMap.SimpleEntry<String, String> entry : testCase.getColumns()) {
+            if (!entry.getKey().equalsIgnoreCase("id")) {
+                setClause.append(entry.getKey()).append(" = ?, ");
+            } else {
+                setClause.append(entry.getKey()).append(" = ?, ");
+            }
+        }
+
+        // Remove the trailing comma and space
+        setClause.setLength(setClause.length() - 2);
+
+        return String.format("UPDATE %s SET %s WHERE id = ?;", testCase.getTableName(), setClause.toString());
+    }
+
+    // Method to return the corresponding macro definition based on entry.getValue()
+    public int getColumnType(String columnType) {
+        columnType = columnType.toUpperCase();
+
+        if (columnType.startsWith("VARCHAR") || columnType.startsWith("CHAR") || columnType.startsWith("LVCHAR")) {
+            return TYPE_VARCHAR;
+        }
+        if (columnType.startsWith("DECIMAL") || columnType.startsWith("NUMERIC")) {
+            return TYPE_DECIMAL;
+        }
+        if (columnType.startsWith("TIMESTAMP")) {
+            return TYPE_TIMESTAMP;
+        }
+        switch (columnType) {
+            case "INT":
+                return TYPE_INT;
+            case "BIGINT":
+                return TYPE_BIGINT;
+            case "FLOAT":
+                return TYPE_FLOAT;
+            case "DOUBLE":
+                return TYPE_DOUBLE;
+            case "BOOLEAN":
+                return TYPE_BOOLEAN;
+            case "TEXT":
+                return TYPE_TEXT;
+            case "DATE":
+                return TYPE_DATE;
+            default:
+                throw new IllegalArgumentException("Unknown column type: " + columnType);
+        }
+    }
+
+    // Method to set the value of a PreparedStatement parameter based on the column type
+    public void setPreparedStatementValue(PreparedStatement pstmt, int parameterIndex, int columnType, String value) throws SQLException {
+        switch (columnType) {
+            case TYPE_INT:
+                pstmt.setInt(parameterIndex, Integer.parseInt(value));
+                break;
+            case TYPE_BIGINT:
+                pstmt.setLong(parameterIndex, Long.parseLong(value));
+                break;
+            case TYPE_FLOAT:
+                pstmt.setFloat(parameterIndex, Float.parseFloat(value));
+                break;
+            case TYPE_DOUBLE:
+                pstmt.setDouble(parameterIndex, Double.parseDouble(value));
+                break;
+            case TYPE_BOOLEAN:
+                pstmt.setBoolean(parameterIndex, Boolean.parseBoolean(value));
+                break;
+            case TYPE_VARCHAR:
+            case TYPE_CHAR:
+            case TYPE_TEXT:
+                pstmt.setString(parameterIndex, value);
+                break;
+            case TYPE_DECIMAL:
+                pstmt.setBigDecimal(parameterIndex, new java.math.BigDecimal(value));
+                break;
+            case TYPE_TIMESTAMP:
+                pstmt.setTimestamp(parameterIndex, java.sql.Timestamp.valueOf(value));
+                break;
+            case TYPE_DATE:
+                pstmt.setDate(parameterIndex, java.sql.Date.valueOf(value));
+                break;
+            default:
+                throw new SQLException("Unknown column type: " + columnType);
+        }
     }
 
     // Generates a random value based on the column type

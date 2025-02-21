@@ -130,6 +130,72 @@ iso=READ_COMMITTED
 [test...]
 ```
 
+## Function Principles
+
+### 1. REPEATABLE_READ Test Principles
+
+#### Data Management
+
+- Pre-fill random data according to each test case to establish the initial data set.
+- Set the transaction isolation level to REPEATABLE_READ and disable auto-commit.
+
+#### Multi-threaded Scenario Simulation
+
+- Read-only threads: Execute read-only operations multiple times within a transaction to ensure consistent results.
+- Mixed threads: Randomly execute insert, delete, and update operations within a transaction, interspersed with multiple consistency checks to verify data stability.
+- Write-only threads: Execute random write operations to simulate business scenarios.
+- 70% probability of committing the transaction, 30% probability of rollback to simulate real scenarios.
+
+#### Data Consistency Verification
+
+- Execute the SELECT statement defined in the configuration item within the read thread.
+- Obtain the result set multiple times and compare string fields row by row to ensure complete consistency.
+- Check the COUNT(*) result to prevent phantom reads.
+- Record errors and terminate the test immediately if inconsistencies are found.
+
+### 2. READ_COMMITTED Test Principles
+
+#### Data Management
+
+- Partition the test data by thread ID (e.g., thread1 handles 1-500, thread2 handles 501-1000).
+- Use double queues (in the database/not in the database) to track data status.
+
+#### Transaction Operation Simulation
+
+- Multi-threaded random execution of insert (take data from the not-in-database queue), delete (take data from the in-database queue), and update (combination of delete + insert).
+- 30% probability of active rollback to test data rollback correctness.
+- Automatically handle deadlock rollbacks and re-add data to the pool.
+
+#### Data Consistency and Visibility Verification
+
+- Before commit: Check that the data modified by this transaction is visible to this transaction and not visible to other transactions.
+- After commit: Verify that the modified data is visible to all transactions.
+- Simulate concurrent transaction reads by creating a new independent connection to verify the read committed feature.
+
+### 3. Common Design
+
+#### Stress Testing
+
+- Use connection pooling to connect to the database.
+- Each transaction contains 0-20 random insert, delete, update, and select operations to simulate high concurrency scenarios.
+- Use atomic counters to count transactions/statements.
+
+#### Logging System
+
+- Separate logs for running logs and SQL logs.
+- SQL logs: Record complete SQL statements and execution timestamps. Control log switches through ControlledFileWriter.
+- Running logs: Randomly record correct verification results and accurately record error results.
+
+#### Verification Dimensions
+
+- Field-level consistency (string comparison)
+- Row count consistency (COUNT(*) verification)
+- Cross-transaction visibility (cross-validation with multiple connections)
+
+#### Overall Evaluation
+
+- The program comprehensively verifies the ACID properties of the database under RR and RC isolation levels through precise state management, multi-dimensional data verification, and realistic transaction behavior simulation, with a particular focus on detecting typical issues such as repeatable reads, phantom reads, and dirty reads.
+
 ## Code Explanation
 
 ### `App.java`
