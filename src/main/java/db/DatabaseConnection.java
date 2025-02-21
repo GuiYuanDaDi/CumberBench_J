@@ -4,26 +4,32 @@ import config.ConfigParser;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 
 public class DatabaseConnection implements AutoCloseable {
-    private static ConnectionPool connectionPool;
+    private int dbIndex;
     private Connection connection;
 
-    public DatabaseConnection(ConfigParser configParser) throws SQLException {
-        if (connectionPool == null) {
-            synchronized (DatabaseConnection.class) {
-                if (connectionPool == null) {
-                    connectionPool = new ConnectionPool(
-                        configParser.getJdbcUrl(),
-                        configParser.getUsername(),
-                        configParser.getPassword(),
-                        20, // initial pool size
-                        30 // max pool size
-                    );
-                }
+    public DatabaseConnection(ConfigParser configParser, int dbIndex) throws SQLException {
+        this.dbIndex = dbIndex;
+        Map<Integer, ConfigParser.DatabaseConfig> databaseConfigs = configParser.getDatabaseConfigs();
+        ConfigParser.DatabaseConfig dbConfig = databaseConfigs.get(dbIndex);
+        if (dbConfig == null) {
+            throw new SQLException("No configuration found for database index: " + dbIndex);
+        }
+        synchronized (ConnectionPool.class) {
+            if (!ConnectionPool.isDataSourceAdded(dbIndex)) {
+                ConnectionPool.addDataSource(
+                    dbIndex,
+                    dbConfig.getJdbcUrl(),
+                    dbConfig.getUsername(),
+                    dbConfig.getPassword(),
+                    20, // initial pool size
+                    30  // max pool size
+                );
             }
         }
-        this.connection = connectionPool.getConnection();
+        this.connection = ConnectionPool.getConnection(dbIndex);
     }
 
     public Connection getConnection() {
@@ -33,7 +39,7 @@ public class DatabaseConnection implements AutoCloseable {
     @Override
     public void close() {
         if (connection != null) {
-            connectionPool.releaseConnection(connection);
+            ConnectionPool.releaseConnection(dbIndex, connection);
         }
     }
 

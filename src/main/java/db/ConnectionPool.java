@@ -1,17 +1,16 @@
 package db;
 
 import java.sql.Connection;
-
 import java.sql.SQLException;
-
+import java.util.HashMap;
+import java.util.Map;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
-
 public class ConnectionPool {
-    private HikariDataSource dataSource;
-    public ConnectionPool(String url, String user, String password, int initialSize, int maxSize) throws SQLException {
+    private static Map<Integer, HikariDataSource> dataSourceMap = new HashMap<>();
 
+    public static void addDataSource(int dbIndex, String url, String user, String password, int initialSize, int maxSize) throws SQLException {
         HikariConfig hikariConfig = new HikariConfig();
         hikariConfig.setJdbcUrl(url);
         hikariConfig.setUsername(user);
@@ -22,16 +21,18 @@ public class ConnectionPool {
         hikariConfig.addDataSourceProperty("prepStmtCacheSize", "250");
         hikariConfig.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
         HikariDataSource dataSource = new HikariDataSource(hikariConfig);
-        this.dataSource = dataSource;
+        dataSourceMap.put(dbIndex, dataSource);
     }
 
-
-
-    public synchronized Connection getConnection() throws SQLException {
-        return  dataSource.getConnection();
+    public static synchronized Connection getConnection(int dbIndex) throws SQLException {
+        HikariDataSource dataSource = dataSourceMap.get(dbIndex);
+        if (dataSource == null) {
+            throw new SQLException("No data source found for database index: " + dbIndex);
+        }
+        return dataSource.getConnection();
     }
 
-    public synchronized void releaseConnection(Connection connection) {
+    public static synchronized void releaseConnection(int dbIndex, Connection connection) {
         if (connection != null) {
             try {
                 connection.close();
@@ -41,5 +42,7 @@ public class ConnectionPool {
         }
     }
 
-
+    public static synchronized boolean isDataSourceAdded(int dbIndex) {
+        return dataSourceMap.containsKey(dbIndex);
+    }
 }

@@ -17,6 +17,8 @@ public class ConfigParser {
     private int max_random; // Maximum random number for test cases
     private boolean enableLogging;
     private Map<String, TestCase> testCases; // Map of test cases
+    private Map<Integer, DatabaseConfig> databaseConfigs; // Map of database configurations
+    private int databaseIndex;
 
     /**
      * Constructor that parses the configuration file.
@@ -47,9 +49,9 @@ public class ConfigParser {
         */
 
         // Parse the main configuration section
-        jdbcUrl = ini.get("main", "jdbcurl"); // Read the JDBC URL
-        username = ini.get("main", "username"); // Read the database username
-        password = ini.get("main", "password"); // Read the database password
+        // jdbcUrl = ini.get("main", "jdbcurl"); // Read the JDBC URL
+        // username = ini.get("main", "username"); // Read the database username
+        // password = ini.get("main", "password"); // Read the database password
         enableLogging = Boolean.parseBoolean(ini.get("main", "logging_sql"));
         // Read test duration, with a default value of 60 seconds
         String testDurationStr = ini.get("main", "test_duration");
@@ -58,6 +60,19 @@ public class ConfigParser {
         // Read max random value, with a default value of 100
         String maxRandomStr = ini.get("main", "max_random");
         max_random = (maxRandomStr != null) ? Integer.parseInt(maxRandomStr) : 100;
+
+        // Parse the database configurations
+        databaseConfigs = new HashMap<>();
+        int dbIndex = 1;
+        while (ini.containsKey("database" + dbIndex)) {
+            String sectionName = "database" + dbIndex;
+            String jdbcUrl = ini.get(sectionName, "jdbcurl");
+            String username = ini.get(sectionName, "username");
+            String password = ini.get(sectionName, "password");
+            databaseConfigs.put(dbIndex, new DatabaseConfig(jdbcUrl, username, password));
+            dbIndex++;
+        }
+        databaseIndex = dbIndex - 1;
 
         // Parse the test cases from sections starting with "test"
         testCases = new HashMap<>();
@@ -76,6 +91,8 @@ public class ConfigParser {
                 testCases.get(testName).setMaxRandom(max_random);
             }
         }
+
+
     }
 
     // Getters for JDBC configuration
@@ -103,5 +120,36 @@ public class ConfigParser {
 
     public Map<String, TestCase> getTestCases() {
         return testCases;
+    }
+
+    public Map<Integer, DatabaseConfig> getDatabaseConfigs() {
+        return databaseConfigs;
+    }
+    public int getDatabaseIndex() {
+        return databaseIndex;
+    }
+
+    public static class DatabaseConfig {
+        private String jdbcUrl;
+        private String username;
+        private String password;
+
+        public DatabaseConfig(String jdbcUrl, String username, String password) {
+            this.jdbcUrl = jdbcUrl;
+            this.username = username;
+            this.password = password;
+        }
+
+        public String getJdbcUrl() {
+            return jdbcUrl;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getPassword() {
+            return password;
+        }
     }
 }

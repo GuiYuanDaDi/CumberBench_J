@@ -1,10 +1,11 @@
-db/ConnectionPool.class
 test/Item.class
-util/Logger.class
-test/TestWorker.class
+config/ConfigParser$DatabaseConfig.class
 util/ControlledFileWriter.class
 App.class
 test/TestCase.class
 config/ConfigParser.class
 test/SQLGenerator.class
+db/ConnectionPool.class
+util/Logger.class
+test/TestWorker.class
 db/DatabaseConnection.class

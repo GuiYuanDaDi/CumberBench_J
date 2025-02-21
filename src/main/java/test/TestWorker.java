@@ -42,7 +42,7 @@ public class TestWorker implements Runnable {
     @Override
     public void run() {
         // Connect to the database, create the table and indexes based on the TestCase, then disconnect
-        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser)) {
+        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser,1)) {
             Connection connection = dbConnection.getConnection();
             try (Statement statement = connection.createStatement()) {
                 String dropsql = "DROP TABLE IF EXISTS " + testCase.getTableName() + ";";
@@ -95,13 +95,13 @@ public class TestWorker implements Runnable {
     }
 
     private void performRepeatbleOperations(int id, ControlledFileWriter fileWriter) {
-        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser)) {
+
+        int threadId = id;
+        SQLGenerator sql_g = new SQLGenerator(testCase);
+        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser, 1)) {
             Connection connection = dbConnection.getConnection();
             connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
             connection.setAutoCommit(true);
-            int threadId = id;
-            SQLGenerator sql_g = new SQLGenerator(testCase);
-
             // Prepopulate the table with 500 random insert statements
             try (Statement statement = connection.createStatement()) {
                 for (int i = 0; i < (configParser.getMaxrandom() * 5); i++) {
@@ -116,52 +116,111 @@ public class TestWorker implements Runnable {
                 //connection.rollback();
                 e.printStackTrace();
             }
-            connection.setAutoCommit(false);
-            while (true) {
-                // Infinite loop to perform random CRUD operations within a transaction              
-                    if (id == 0) {
-                        // Read-only thread, only performs read transactions
-                        validateDataConsistency(connection);
-                        connection.commit();
-                        transactionCount.incrementAndGet(); // Increment transaction count
-                    }
-                    if (id == 1) {
-                        // Mixed read-write thread
-                        fileWriter.write("begin;" + "\n");
-                        performRandomOperations(connection, fileWriter, threadId);
-                        validateDataConsistency(connection);
-                        if (Math.random() < 0.7) {
-                            connection.commit();
-                            fileWriter.write("commit;" + "\n");
-                            transactionCount.incrementAndGet(); // Increment transaction count
-                        } else {
-                            connection.rollback();
-                            transactionCount.incrementAndGet(); // Increment transaction count
-                            fileWriter.write("rollback;" + "\n");
-                        }
-                    }
-                    if (id > 1) {
-                        // write thread
-                        fileWriter.write("begin;" + "\n");
-                        performRandomOperations(connection, fileWriter, threadId);
-                        if (Math.random() < 0.7) {
-                            connection.commit();
-                            fileWriter.write("commit;" + "\n");
-                            transactionCount.incrementAndGet(); // Increment transaction count
-                        } else {
-                            connection.rollback();
-                            transactionCount.incrementAndGet(); // Increment transaction count
-                            fileWriter.write("rollback;" + "\n");
-                        }
-                    }
-        
-            }
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
+    
+            // Infinite loop to perform random CRUD operations within a transaction              
+            if (id == 0) {
+                // Read-only thread, only performs read transactions
+                RepeatbleReadOnly((int) (Math.random() * configParser.getDatabaseIndex()) + 1);
+            }
+            if (id == 1) {
+                // Mixed read-write thread
+                RepeatbleMixed(1, fileWriter, threadId);
+            }
+            if (id > 1) {
+                // write thread
+                RepeatbleWriteOnly(1, fileWriter, threadId);
+
+        }
+
     }
+    private void RepeatbleWriteOnly(int index, ControlledFileWriter fileWriter, int threadId) {
+        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser, index)) {
+            while (true) {
+                Connection connection = dbConnection.getConnection();
+                connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
+                connection.setAutoCommit(false);
+                fileWriter.write("begin;" + "\n");
+                performRandomOperations(connection, fileWriter, threadId);
+                if (Math.random() < 0.7) {
+                    connection.commit();
+                    fileWriter.write("commit;" + "\n");
+                    transactionCount.incrementAndGet(); // Increment transaction count
+                } else {
+                    connection.rollback();
+                    transactionCount.incrementAndGet(); // Increment transaction count
+                    fileWriter.write("rollback;" + "\n");
+                }
+            }
+        } catch (SQLException e) {
+            if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
+                Logger.log(String.format("Test case: %s, %s lock conflict, continuing execution RepeatbleWriteOnly", testCase.getTestCaseName(), e));
+                
+            } else {
+                e.printStackTrace();
+            }
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    } 
+    private void RepeatbleMixed(int index, ControlledFileWriter fileWriter, int threadId) {
+        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser, index)) {
+            while (true) {
+                Connection connection = dbConnection.getConnection();
+                connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
+                connection.setAutoCommit(false);
+                fileWriter.write("begin;" + "\n");
+                performRandomOperations(connection, fileWriter, threadId);
+                validateDataConsistency(connection);
+                performRandomOperations(connection, fileWriter, threadId);
+                validateDataConsistency(connection);
+                if (Math.random() < 0.7) {
+                    connection.commit();
+                    fileWriter.write("commit;" + "\n");
+                    transactionCount.incrementAndGet(); // Increment transaction count
+                } else {
+                    connection.rollback();
+                    transactionCount.incrementAndGet(); // Increment transaction count
+                    fileWriter.write("rollback;" + "\n");
+                }
+            }
+        } catch (SQLException e) {
+            if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
+                Logger.log(String.format("Test case: %s, %s lock conflict, continuing execution RepeatbleMixed ", testCase.getTestCaseName(), e));
+                
+            } else {
+                e.printStackTrace();
+            }
+        }catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+    private void RepeatbleReadOnly(int index) {
+        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser, index)) {
+            while (true) {
+                Connection connection = dbConnection.getConnection();
+                connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
+                connection.setAutoCommit(false);
+                validateDataConsistency(connection);
+                connection.commit();
+                transactionCount.incrementAndGet(); // Increment transaction count
+            }
+        } catch (SQLException e) {
+            if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
+                Logger.log(String.format("Test case: %s, %s lock conflict, continuing execution RepeatbleReadOnly ", testCase.getTestCaseName(), e));
+                
+            } else {
+                e.printStackTrace();
+            }
+        }
+
+    } 
 
     private int getIsolationLevel(String isolationLevel) {
         switch (isolationLevel) {
@@ -179,7 +238,7 @@ public class TestWorker implements Runnable {
     private void performRandomOperations(Connection connection, ControlledFileWriter fileWriter, int id) throws SQLException {
         // Generates a random number of random CRUD operations
         SQLGenerator sql_g = new SQLGenerator(testCase);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < (int) (Math.random() * 15); i++) {
             int operation = (int) (Math.random() * 3);
             String sql;
             switch (operation) {
@@ -200,8 +259,8 @@ public class TestWorker implements Runnable {
                 queryCount.incrementAndGet();
             } catch (SQLException e) {
                 if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
-                    Logger.log(String.format("Test case: %s, %s lock conflict, continuing execution", testCase.getTestCaseName(), e));
-
+                    Logger.log(String.format("Test case: %s, %s lock conflict, continuing execution performRandomOperations ", testCase.getTestCaseName(), e));
+                    throw e;
                 } else {
                     throw e;
                 }
@@ -292,8 +351,8 @@ public class TestWorker implements Runnable {
             }
         }catch(SQLException e){
             if (e.getSQLState().equals("40001") || e.getSQLState().equals("40P01")) {
-                Logger.log(String.format("Test case: %s, %s lock conflict, continuing execution", testCase.getTestCaseName(), e));
-
+                Logger.log(String.format("Test case: %s, %s lock conflict, continuing execution validateDataConsistency", testCase.getTestCaseName(), e));
+                throw e;
             } else {
                 throw e;
             }
@@ -302,7 +361,7 @@ public class TestWorker implements Runnable {
     }
 
     private void performReadCommittedOperations(int thid, ControlledFileWriter fileWriter) {
-        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser)) {
+        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser,1)) {
             Connection connection = dbConnection.getConnection();
             connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
             connection.setAutoCommit(false);
@@ -462,7 +521,7 @@ public class TestWorker implements Runnable {
         DatabaseConnection dbConnection = null;
         if (connection == null) {
             try {
-                dbConnection = new DatabaseConnection(configParser);
+                dbConnection = new DatabaseConnection(configParser,(int) (Math.random() * configParser.getDatabaseIndex()) + 1);
                 connection = dbConnection.getConnection();
                 connection.setTransactionIsolation(getIsolationLevel(testCase.getIsolationLevel()));
                 connection.setAutoCommit(false);

@@ -73,7 +73,7 @@ public class App {
      * @return true if the database connection is successful.
      */
     private static boolean testDatabaseConnection() {
-        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser)) {
+        try (DatabaseConnection dbConnection = new DatabaseConnection(configParser,1)) {
             Connection connection = dbConnection.getConnection();
             return connection != null && !connection.isClosed();
         } catch (SQLException e) {

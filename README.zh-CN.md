@@ -56,15 +56,24 @@ db-consistency-test-tool
 
 ```ini
 [main]
-
-jdbcurl=jdbc:postgresql://localhost:5432/testdb
-username=testuser
-password=testpass
 ;测试时间
 test_duration=60
 ;测试使用的最大随机范围
 max_random = 100
 logging_sql = true
+
+;默认database1 为主库连接 ，备上以以只读测试为主。
+[database1]
+jdbcurl=jdbc:postgresql://localhost:5432/testdb
+username=testuser
+password=testpass
+
+[database2]
+jdbcurl=jdbc:postgresql://localhost:5432/testdb
+username=testuser
+password=testpass
+;容忍延迟
+;delay=1
 
 ;RC 测试 第一个字段必须为id,
 ;RR 测试第一列最好不是主健，因为随机值容易重复
